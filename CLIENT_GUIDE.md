@@ -51,9 +51,14 @@ X-UID: 3
 
 ### Code Example
 
-#### curl
+#### 範例：Mac / Linux (curl)
 ```bash
 curl -s http://127.0.0.1:8000/api/help/ | python3 -m json.tool
+```
+
+#### 範例：Windows (PowerShell)
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/help/
 ```
 
 #### Python (requests)
@@ -107,12 +112,21 @@ Content-Type: application/json
 }
 ```
 
-### 範例：curl
+### 範例：Mac / Linux (curl)
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/auth/register/ \
   -H "Content-Type: application/json" \
   -d '{"username":"alice","password":"Pass1234"}'
+```
+
+### 範例：Windows (PowerShell)
+
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/auth/register/ `
+  -Method POST `
+  -Headers @{"Content-Type"="application/json"} `
+  -Body '{"username":"alice","password":"Pass1234"}'
 ```
 
 ### 範例：Python
@@ -189,7 +203,7 @@ GET /api/posts/?page=1&page_size=5
 | `results` | 本頁的貼文陣列 |
 | `image_url` | 圖片的完整 URL，無圖片時為 `null` |
 
-### 範例：curl
+### 範例：Mac / Linux (curl)
 
 ```bash
 # 第 1 頁，每頁 5 筆
@@ -197,6 +211,16 @@ curl "http://127.0.0.1:8000/api/posts/?page=1&page_size=5"
 
 # 第 2 頁，每頁 10 筆（預設）
 curl "http://127.0.0.1:8000/api/posts/?page=2"
+```
+
+### 範例：Windows (PowerShell)
+
+```powershell
+# 第 1 頁，每頁 5 筆
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/posts/?page=1&page_size=5"
+
+# 第 2 頁，每頁 10 筆（預設）
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/posts/?page=2"
 ```
 
 ### 範例：Python（翻頁遍歷所有貼文）
@@ -281,7 +305,7 @@ image=<file>
 }
 ```
 
-### 範例：curl（純文字）
+### 範例：Mac / Linux (curl)（純文字）
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/posts/ \
@@ -290,13 +314,33 @@ curl -X POST http://127.0.0.1:8000/api/posts/ \
   -d '{"title":"Hello World","content":"My first post!"}'
 ```
 
-### 範例：curl（含圖片）
+### 範例：Windows (PowerShell)（純文字）
+
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/posts/ `
+  -Method POST `
+  -Headers @{"X-UID"="3"; "Content-Type"="application/json"} `
+  -Body '{"title":"Hello World","content":"My first post!"}'
+```
+
+### 範例：Mac / Linux (curl)（含圖片）
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/posts/ \
   -H "X-UID: 3" \
   -F "title=Photo Post" \
   -F "content=Check out this photo!" \
+  -F "image=@/path/to/photo.jpg"
+```
+
+### 範例：Windows (PowerShell)（含圖片）
+
+```powershell
+# PowerShell 原生上傳 Multipart/form-data 較為繁瑣，在 Windows 建議強制呼叫 curl.exe
+curl.exe -X POST http://127.0.0.1:8000/api/posts/ `
+  -H "X-UID: 3" `
+  -F "title=Photo Post" `
+  -F "content=Check out this photo!" `
   -F "image=@/path/to/photo.jpg"
 ```
 
@@ -441,13 +485,26 @@ X-UID: 3
 }
 ```
 
-### 範例：curl
+### 範例：Mac / Linux (curl)
 
 ```bash
 curl -s -o /dev/null -w "HTTP Status: %{http_code}" \
   -X DELETE http://127.0.0.1:8000/api/operations/posts/5/delete/ \
   -H "X-UID: 3"
 # HTTP Status: 204
+```
+
+### 範例：Windows (PowerShell)
+
+```powershell
+try {
+    $resp = Invoke-WebRequest -Uri http://127.0.0.1:8000/api/operations/posts/5/delete/ `
+      -Method DELETE `
+      -Headers @{"X-UID"="3"}
+    Write-Host "HTTP Status:" $resp.StatusCode
+} catch {
+    Write-Host "HTTP Status:" $_.Exception.Response.StatusCode.value__
+}
 ```
 
 ### 範例：Python
