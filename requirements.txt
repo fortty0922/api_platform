@@ -1,0 +1,18 @@
+# 核心框架
+Django==5.0.7
+djangorestframework>=3.17.0
+
+# 伺服器 (ASGI)
+daphne>=4.1.0
+
+# 背景排程
+APScheduler>=3.10.0
+
+# HTTP 客戶端 (用來抓外部 API)
+requests>=2.32.0
+
+# 環境變數管理
+python-dotenv>=1.1.0
+
+# 圖片處理
+Pillow>=11.0.0

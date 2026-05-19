@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Platform — Server Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161b22;
+      --surface2:   #21262d;
+      --border:     #30363d;
+      --text:       #e6edf3;
+      --muted:      #8b949e;
+      --green:      #3fb950;
+      --green-dim:  #1a4a2a;
+      --blue:       #58a6ff;
+      --blue-dim:   #0d2d6b;
+      --purple:     #a371f7;
+      --purple-dim: #2d1b5e;
+      --orange:     #f0883e;
+      --orange-dim: #4a2500;
+      --red:        #f85149;
+      --red-dim:    #4a0e0a;
+      --yellow:     #e3b341;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .logo .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    #refresh-indicator {
+      font-size: .75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    #refresh-indicator .spinner {
+      width: 12px; height: 12px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #server-time { font-family: 'JetBrains Mono', monospace; font-size: .8rem; color: var(--muted); }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+
+    h2 { font-size: .7rem; font-weight: 600; text-transform: uppercase;
+         letter-spacing: .08em; color: var(--muted); margin-bottom: 1rem; }
+
+    /* ── Stat Cards ─────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.4rem 1.6rem;
+      transition: border-color .2s, transform .2s;
+    }
+    .card:hover { border-color: var(--blue); transform: translateY(-2px); }
+    .card-label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: .5rem;
+    }
+    .card-value {
+      font-size: 2.4rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .card-sub { font-size: .75rem; color: var(--muted); margin-top: .4rem; }
+    .card.green .card-value { color: var(--green); }
+    .card.blue  .card-value { color: var(--blue); }
+    .card.purple .card-value { color: var(--purple); }
+    .card.orange .card-value { color: var(--orange); }
+
+    /* ── Status Badge ───────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .2rem .65rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+    }
+    .badge.running { background: var(--green-dim); color: var(--green); }
+    .badge.stopped { background: var(--red-dim);   color: var(--red); }
+    .badge .blink {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s infinite;
+    }
+
+    /* ── Grid ───────────────────────────────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ── Panel ──────────────────────────────────────────────────── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-size: .85rem; font-weight: 600; }
+
+    /* ── Table ──────────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: .7rem 1.4rem; text-align: left; }
+    th { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+         color: var(--muted); background: var(--surface2); font-weight: 600; }
+    td { font-size: .82rem; border-top: 1px solid var(--border); }
+    tr:hover td { background: var(--surface2); }
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: .78rem; }
+    .cat {
+      display: inline-block;
+      padding: .1rem .55rem;
+      border-radius: 4px;
+      font-size: .7rem;
+      font-weight: 600;
+      background: var(--blue-dim);
+      color: var(--blue);
+    }
+    .cat.science { background: var(--purple-dim); color: var(--purple); }
+    .cat.general { background: var(--orange-dim); color: var(--orange); }
+    .empty-state { padding: 2.5rem; text-align: center; color: var(--muted); font-size: .85rem; }
+
+    /* ── Sync Status Bar ────────────────────────────────────────── */
+    .sync-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.6rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .sync-info { display: flex; flex-direction: column; gap: .25rem; }
+    .sync-info .label { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .sync-info .val { font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
+
+    /* ── Progress ring ──────────────────────────────────────────── */
+    .ring-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+    }
+    .ring-label { font-size: .75rem; color: var(--muted); text-align: right; }
+    #countdown-ring {
+      transform: rotate(-90deg);
+      transition: stroke-dashoffset .5s linear;
+    }
+
+    /* ── Skeleton loader ────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      height: 1em;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="dot"></div>
+    API Platform — Server Monitor
+  </div>
+  <div class="header-right">
+    <div id="refresh-indicator">
+      <div class="spinner" id="spinner"></div>
+      <span id="refresh-text">自動更新每 10 秒</span>
+    </div>
+    <div id="server-time">--:--:--</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Sync Status Bar ─────────────────────────────────────── -->
+  <div class="sync-bar" id="sync-bar">
+    <div>
+      <div class="card-label" style="margin-bottom:.4rem">背景排程狀態</div>
+      <span class="badge stopped" id="scheduler-badge">
+        <span class="blink"></span>
+        <span id="scheduler-text">載入中...</span>
+      </span>
+    </div>
+    <div class="sync-info">
+      <span class="label">上次同步</span>
+      <span class="val" id="last-sync">—</span>
+    </div>
+    <div class="sync-info">
+      <span class="label">下次同步</span>
+      <span class="val" id="next-sync">—</span>
+    </div>
+    <div class="ring-wrap">
+      <div class="ring-label">
+        <div id="countdown-text" style="font-size:1.1rem;font-weight:700;color:var(--blue)">—</div>
+        <div>秒後同步</div>
+      </div>
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="22" fill="none" stroke="var(--surface2)" stroke-width="4"/>
+        <circle id="countdown-ring" cx="26" cy="26" r="22" fill="none"
+                stroke="var(--blue)" stroke-width="4"
+                stroke-dasharray="138.2" stroke-dashoffset="0"
+                stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ── Stat Cards ─────────────────────────────────────────── -->
+  <h2>系統概覽</h2>
+  <div class="cards">
+    <div class="card green">
+      <div class="card-label">已同步外部文章</div>
+      <div class="card-value" id="stat-synced">—</div>
+      <div class="card-sub">ExternalPost 資料表</div>
+    </div>
+    <div class="card blue">
+      <div class="card-label">使用者貼文</div>
+      <div class="card-value" id="stat-posts">—</div>
+      <div class="card-sub">Post 資料表</div>
+    </div>
+    <div class="card purple">
+      <div class="card-label">註冊使用者</div>
+      <div class="card-value" id="stat-users">—</div>
+      <div class="card-sub">User 資料表</div>
+    </div>
+    <div class="card orange">
+      <div class="card-label">Dashboard 刷新次數</div>
+      <div class="card-value" id="stat-refreshes">0</div>
+      <div class="card-sub">自頁面載入起</div>
+    </div>
+  </div>
+
+  <!-- ── Two-column tables ──────────────────────────────────── -->
+  <div class="grid-2">
+
+    <!-- External posts -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🔄 最近同步的外部文章</span>
+        <span class="badge running" style="font-size:.65rem">Live</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>作者</th>
+            <th>分類</th>
+            <th>瀏覽</th>
+            <th>同步時間</th>
+          </tr>
+        </thead>
+        <tbody id="ext-post-tbody">
+          <tr><td colspan="5" class="empty-state">載入中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- User posts -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📝 最近使用者貼文</span>
+        <span class="badge running" style="font-size:.65rem">Live</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>標題</th>
+            <th>作者</th>
+            <th>建立時間</th>
+          </tr>
+        </thead>
+        <tbody id="user-post-tbody">
+          <tr><td colspan="4" class="empty-state">載入中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const REFRESH_INTERVAL = 10; // seconds
+  let refreshCount = 0;
+  let countdownTimer = null;
+  let secondsLeft = REFRESH_INTERVAL;
+  const RING_CIRC = 138.2;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('zh-TW', { hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString('zh-TW', { month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  }
+  function secsUntil(iso) {
+    if (!iso) return null;
+    return Math.max(0, Math.round((new Date(iso) - Date.now()) / 1000));
+  }
+
+  // ── Countdown ring ─────────────────────────────────────────────────────────
+  function startCountdown(totalSecs) {
+    if (countdownTimer) clearInterval(countdownTimer);
+    let remaining = totalSecs;
+
+    function tick() {
+      remaining = Math.max(0, remaining - 1);
+      document.getElementById('countdown-text').textContent = remaining;
+      const offset = RING_CIRC * (1 - remaining / Math.max(totalSecs, 1));
+      document.getElementById('countdown-ring').style.strokeDashoffset = offset;
+    }
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+  }
+
+  // ── Fetch & render ─────────────────────────────────────────────────────────
+  async function fetchStats() {
+    document.getElementById('spinner').style.display = 'block';
+    try {
+      const res = await fetch('/dashboard/api/stats/');
+      if (!res.ok) throw new Error(res.statusText);
+      const d = await res.json();
+      render(d);
+    } catch (e) {
+      document.getElementById('scheduler-text').textContent = '連線失敗';
+      document.getElementById('scheduler-badge').className = 'badge stopped';
+    } finally {
+      document.getElementById('spinner').style.display = 'none';
+    }
+  }
+
+  function render(d) {
+    refreshCount++;
+    document.getElementById('stat-refreshes').textContent = refreshCount;
+
+    // Server time
+    document.getElementById('server-time').textContent = fmtTime(d.server_time);
+
+    // Stat cards
+    document.getElementById('stat-synced').textContent = d.sync.total_synced;
+    document.getElementById('stat-posts').textContent  = d.posts.total;
+    document.getElementById('stat-users').textContent  = d.users.total;
+
+    // Scheduler badge
+    const badge = document.getElementById('scheduler-badge');
+    const txt   = document.getElementById('scheduler-text');
+    if (d.sync.scheduler_running) {
+      badge.className = 'badge running';
+      txt.textContent = '排程運行中';
+    } else {
+      badge.className = 'badge stopped';
+      txt.textContent = '排程未啟動';
+    }
+
+    // Sync times
+    document.getElementById('last-sync').textContent = fmtDate(d.sync.last_synced_at);
+    document.getElementById('next-sync').textContent = fmtDate(d.sync.next_run);
+
+    // Countdown
+    const secs = secsUntil(d.sync.next_run);
+    if (secs !== null) startCountdown(secs);
+
+    // External posts table
+    const extTbody = document.getElementById('ext-post-tbody');
+    if (d.recent_external_posts.length === 0) {
+      extTbody.innerHTML = '<tr><td colspan="5" class="empty-state">尚無同步資料</td></tr>';
+    } else {
+      extTbody.innerHTML = d.recent_external_posts.map(p => {
+        const catClass = p.category === 'science' ? 'science'
+                       : p.category === 'general' ? 'general' : '';
+        return `<tr>
+          <td class="mono" style="color:var(--muted)">${p.ext_id}</td>
+          <td>${p.author}</td>
+          <td><span class="cat ${catClass}">${p.category}</span></td>
+          <td class="mono">${p.views.toLocaleString()}</td>
+          <td class="mono" style="color:var(--muted)">${fmtDate(p.synced_at)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // User posts table
+    const userTbody = document.getElementById('user-post-tbody');
+    if (d.recent_user_posts.length === 0) {
+      userTbody.innerHTML = '<tr><td colspan="4" class="empty-state">尚無使用者貼文</td></tr>';
+    } else {
+      userTbody.innerHTML = d.recent_user_posts.map(p => `<tr>
+        <td class="mono" style="color:var(--muted)">#${p.id}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.title}</td>
+        <td style="color:var(--blue)">${p.author__username}</td>
+        <td class="mono" style="color:var(--muted)">${fmtDate(p.created_at)}</td>
+      </tr>`).join('');
+    }
+  }
+
+  // ── Auto-refresh loop ──────────────────────────────────────────────────────
+  function startRefreshLoop() {
+    fetchStats(); // immediate first load
+    setInterval(fetchStats, REFRESH_INTERVAL * 1000);
+  }
+
+  // ── Page countdown (separate from sync countdown) ──────────────────────────
+  let pageCountdown = REFRESH_INTERVAL;
+  setInterval(() => {
+    pageCountdown = pageCountdown <= 1 ? REFRESH_INTERVAL : pageCountdown - 1;
+    document.getElementById('refresh-text').textContent =
+      `自動更新（${pageCountdown}s）`;
+  }, 1000);
+
+  startRefreshLoop();
+</script>
+
+</body>
+</html>
