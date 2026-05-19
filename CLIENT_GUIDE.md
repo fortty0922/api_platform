@@ -605,3 +605,11 @@ print(f"✅ 貼文 {post_id} 已刪除")
 ### Q5：`next` 是什麼？
 
 分頁回應中的 `next` 是下一頁的**完整 URL**，可以直接 `requests.get(data["next"])` 取下一頁。最後一頁時 `next` 為 `null`。
+
+### Q6：在 PowerShell 打 API，印出來的資料一半變成 `...` 怎麼辦？
+
+這是 PowerShell 預設的顯示限制（當陣列或字串太長時會自動折疊）。
+**解法**：在指令最後面加上 `| ConvertTo-Json -Depth 10`，強制把它轉成完整的 JSON 格式印出來：
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/help/ | ConvertTo-Json -Depth 10
+```
