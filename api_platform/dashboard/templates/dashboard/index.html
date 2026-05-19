@@ -244,7 +244,7 @@
   <div class="header-right">
     <div id="refresh-indicator">
       <div class="spinner" id="spinner"></div>
-      <span id="refresh-text">自動更新每 10 秒</span>
+      <span id="refresh-text">連線中...</span>
     </div>
     <div id="server-time">--:--:--</div>
   </div>
@@ -359,13 +359,13 @@
 </main>
 
 <script>
-  const REFRESH_INTERVAL = 10; // seconds
   let refreshCount = 0;
-  let countdownTimer = null;
-  let secondsLeft = REFRESH_INTERVAL;
+  let ws = null;
+  let reconnectTimer = null;
   const RING_CIRC = 138.2;
+  let countdownTimer = null;
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────────
   function fmtTime(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -383,11 +383,10 @@
     return Math.max(0, Math.round((new Date(iso) - Date.now()) / 1000));
   }
 
-  // ── Countdown ring ─────────────────────────────────────────────────────────
+  // ── Countdown ring ───────────────────────────────────────────────────────────
   function startCountdown(totalSecs) {
     if (countdownTimer) clearInterval(countdownTimer);
     let remaining = totalSecs;
-
     function tick() {
       remaining = Math.max(0, remaining - 1);
       document.getElementById('countdown-text').textContent = remaining;
@@ -398,35 +397,15 @@
     countdownTimer = setInterval(tick, 1000);
   }
 
-  // ── Fetch & render ─────────────────────────────────────────────────────────
-  async function fetchStats() {
-    document.getElementById('spinner').style.display = 'block';
-    try {
-      const res = await fetch('/dashboard/api/stats/');
-      if (!res.ok) throw new Error(res.statusText);
-      const d = await res.json();
-      render(d);
-    } catch (e) {
-      document.getElementById('scheduler-text').textContent = '連線失敗';
-      document.getElementById('scheduler-badge').className = 'badge stopped';
-    } finally {
-      document.getElementById('spinner').style.display = 'none';
-    }
-  }
-
+  // ── Render ───────────────────────────────────────────────────────────────────
   function render(d) {
     refreshCount++;
     document.getElementById('stat-refreshes').textContent = refreshCount;
-
-    // Server time
     document.getElementById('server-time').textContent = fmtTime(d.server_time);
-
-    // Stat cards
     document.getElementById('stat-synced').textContent = d.sync.total_synced;
     document.getElementById('stat-posts').textContent  = d.posts.total;
     document.getElementById('stat-users').textContent  = d.users.total;
 
-    // Scheduler badge
     const badge = document.getElementById('scheduler-badge');
     const txt   = document.getElementById('scheduler-text');
     if (d.sync.scheduler_running) {
@@ -437,15 +416,12 @@
       txt.textContent = '排程未啟動';
     }
 
-    // Sync times
     document.getElementById('last-sync').textContent = fmtDate(d.sync.last_synced_at);
     document.getElementById('next-sync').textContent = fmtDate(d.sync.next_run);
 
-    // Countdown
     const secs = secsUntil(d.sync.next_run);
     if (secs !== null) startCountdown(secs);
 
-    // External posts table
     const extTbody = document.getElementById('ext-post-tbody');
     if (d.recent_external_posts.length === 0) {
       extTbody.innerHTML = '<tr><td colspan="5" class="empty-state">尚無同步資料</td></tr>';
@@ -463,7 +439,6 @@
       }).join('');
     }
 
-    // User posts table
     const userTbody = document.getElementById('user-post-tbody');
     if (d.recent_user_posts.length === 0) {
       userTbody.innerHTML = '<tr><td colspan="4" class="empty-state">尚無使用者貼文</td></tr>';
@@ -477,21 +452,42 @@
     }
   }
 
-  // ── Auto-refresh loop ──────────────────────────────────────────────────────
-  function startRefreshLoop() {
-    fetchStats(); // immediate first load
-    setInterval(fetchStats, REFRESH_INTERVAL * 1000);
+  // ── WebSocket client ─────────────────────────────────────────────────────────
+  function setStatus(text, spinning) {
+    document.getElementById('refresh-text').textContent = text;
+    document.getElementById('spinner').style.display = spinning ? 'block' : 'none';
   }
 
-  // ── Page countdown (separate from sync countdown) ──────────────────────────
-  let pageCountdown = REFRESH_INTERVAL;
-  setInterval(() => {
-    pageCountdown = pageCountdown <= 1 ? REFRESH_INTERVAL : pageCountdown - 1;
-    document.getElementById('refresh-text').textContent =
-      `自動更新（${pageCountdown}s）`;
-  }, 1000);
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws/dashboard/`);
 
-  startRefreshLoop();
+    ws.onopen = () => {
+      clearTimeout(reconnectTimer);
+      setStatus('🟢 WebSocket 已連線', false);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        render(data);
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
+    };
+
+    ws.onclose = (event) => {
+      setStatus('🔴 連線中斷，5 秒後重連...', true);
+      reconnectTimer = setTimeout(connect, 5000);
+    };
+
+    ws.onerror = (err) => {
+      console.error('WebSocket error', err);
+      ws.close();
+    };
+  }
+
+  connect();
 </script>
 
 </body>

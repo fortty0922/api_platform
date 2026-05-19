@@ -8,6 +8,9 @@ daphne>=4.1.0
 # 背景排程
 APScheduler>=3.10.0
 
+# WebSocket 支援
+channels>=4.0.0
+
 # HTTP 客戶端 (用來抓外部 API)
 requests>=2.32.0
 

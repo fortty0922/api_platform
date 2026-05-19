@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third-party
     'rest_framework',
+    'channels',
     # Local apps
     'sync_worker.apps.SyncWorkerConfig',
     'mock_api.apps.MockApiConfig',
@@ -57,6 +58,14 @@ INSTALLED_APPS = [
     'post_operations',
     'dashboard',
 ]
+
+ASGI_APPLICATION = 'api_platform.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
