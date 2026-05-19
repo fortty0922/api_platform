@@ -99,14 +99,67 @@
             gap: 1rem;
         }
 
-        .input-group {
+        .user-profile {
+            display: none; /* hidden when not logged in */
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+        }
+        
+        .user-profile.active {
+            display: flex;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-accent);
             display: flex;
             align-items: center;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.4rem 0.8rem;
-            transition: all 0.2s ease;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        /* Auth Modal Tabs */
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .auth-tab.active {
+            color: var(--primary-accent);
+            border-bottom-color: var(--primary-accent);
+            font-weight: 500;
+        }
+
+        .auth-form-section {
+            display: none;
+        }
+
+        .auth-form-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .input-group:focus-within {
@@ -487,11 +540,18 @@
             <h2>Nexus API</h2>
         </div>
         <div class="auth-container">
-            <div class="input-group">
-                <label for="uid-input">X-UID (Auth):</label>
-                <input type="number" id="uid-input" placeholder="e.g. 1" min="1">
+            <div id="login-btn-container">
+                <button id="open-auth-btn" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+                    Login / Register
+                </button>
             </div>
-            <button id="refresh-btn" class="btn btn-outline" style="padding: 0.4rem 0.8rem;">
+            <div id="user-profile" class="user-profile">
+                <div class="user-avatar" id="nav-avatar">U</div>
+                <span id="nav-username" style="font-weight: 500; font-size: 0.875rem;">Username</span>
+                <span id="nav-uid" style="color: var(--text-secondary); font-size: 0.75rem; font-family: monospace;"></span>
+                <button id="logout-btn" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem; border-color: transparent;">Logout</button>
+            </div>
+            <button id="refresh-btn" class="btn btn-outline" style="padding: 0.4rem 0.8rem;" title="Refresh Posts">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
             </button>
         </div>
@@ -566,6 +626,51 @@
         </div>
     </div>
 
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="glass-panel modal-content" style="max-width: 400px;">
+            <div class="modal-header" style="margin-bottom: 0.5rem;">
+                <h3>Authentication</h3>
+                <button class="close-btn" id="close-auth-modal">&times;</button>
+            </div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tab-login">Login</div>
+                <div class="auth-tab" id="tab-register">Register</div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form-section active">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="login-submit" style="margin-top: 1rem;">
+                    <span>Login</span>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form-section">
+                <div class="form-group">
+                    <label for="register-username">Choose Username</label>
+                    <input type="text" id="register-username" class="form-control" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" class="form-control" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary" id="register-submit" style="margin-top: 1rem; background: linear-gradient(to right, #8b5cf6, #6d28d9);">
+                    <span>Create Account</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
@@ -574,9 +679,17 @@
         const API_BASE = '/api';
         
         // DOM Elements
-        const uidInput = document.getElementById('uid-input');
+        const loginBtnContainer = document.getElementById('login-btn-container');
+        const openAuthBtn = document.getElementById('open-auth-btn');
+        const userProfile = document.getElementById('user-profile');
+        const navUsername = document.getElementById('nav-username');
+        const navAvatar = document.getElementById('nav-avatar');
+        const navUid = document.getElementById('nav-uid');
+        const logoutBtn = document.getElementById('logout-btn');
+        
         const postsContainer = document.getElementById('posts-container');
         const createForm = document.getElementById('create-form');
+        const createSubmit = document.getElementById('create-submit');
         const refreshBtn = document.getElementById('refresh-btn');
         const postCount = document.getElementById('post-count');
         
@@ -586,41 +699,192 @@
         const closeModalBtn = document.getElementById('close-modal');
         const cancelEditBtn = document.getElementById('cancel-edit');
         
+        // Auth Modal Elements
+        const authModal = document.getElementById('auth-modal');
+        const closeAuthModalBtn = document.getElementById('close-auth-modal');
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        
+        // State
+        let currentUser = null; // { uid: string, username: string }
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Check auth state
             const savedUID = localStorage.getItem('nexus_uid');
-            if (savedUID) {
-                uidInput.value = savedUID;
+            const savedUsername = localStorage.getItem('nexus_username');
+            
+            if (savedUID && savedUsername) {
+                setAuthState({ uid: savedUID, username: savedUsername });
+            } else {
+                setAuthState(null);
             }
             
             fetchPosts();
             
-            // Event Listeners
-            uidInput.addEventListener('change', (e) => {
-                localStorage.setItem('nexus_uid', e.target.value);
-            });
-            
+            // Event Listeners: Posts
             refreshBtn.addEventListener('click', fetchPosts);
             createForm.addEventListener('submit', handleCreatePost);
             editForm.addEventListener('submit', handleEditPost);
             
+            // Event Listeners: Modals
             closeModalBtn.addEventListener('click', closeModal);
             cancelEditBtn.addEventListener('click', closeModal);
-            
-            // Close modal on outside click
             editModal.addEventListener('click', (e) => {
                 if (e.target === editModal) closeModal();
             });
+            
+            // Event Listeners: Auth
+            openAuthBtn.addEventListener('click', () => authModal.classList.add('active'));
+            closeAuthModalBtn.addEventListener('click', () => authModal.classList.remove('active'));
+            authModal.addEventListener('click', (e) => {
+                if (e.target === authModal) authModal.classList.remove('active');
+            });
+            
+            logoutBtn.addEventListener('click', handleLogout);
+            
+            // Auth Tabs
+            tabLogin.addEventListener('click', () => switchAuthTab('login'));
+            tabRegister.addEventListener('click', () => switchAuthTab('register'));
+            
+            // Auth Forms
+            loginForm.addEventListener('submit', handleLogin);
+            registerForm.addEventListener('submit', handleRegister);
         });
+
+        // Auth Logic
+        function setAuthState(user) {
+            currentUser = user;
+            if (user) {
+                // Logged in
+                localStorage.setItem('nexus_uid', user.uid);
+                localStorage.setItem('nexus_username', user.username);
+                
+                loginBtnContainer.style.display = 'none';
+                userProfile.classList.add('active');
+                
+                navUsername.textContent = `@${user.username}`;
+                navAvatar.textContent = user.username.charAt(0).toUpperCase();
+                navUid.textContent = `UID: ${user.uid}`;
+                
+                // Enable forms
+                document.getElementById('create-title').disabled = false;
+                document.getElementById('create-content').disabled = false;
+                createSubmit.disabled = false;
+                createSubmit.querySelector('span').textContent = 'Publish Post';
+            } else {
+                // Logged out
+                localStorage.removeItem('nexus_uid');
+                localStorage.removeItem('nexus_username');
+                
+                loginBtnContainer.style.display = 'block';
+                userProfile.classList.remove('active');
+                
+                // Disable forms
+                document.getElementById('create-title').disabled = true;
+                document.getElementById('create-content').disabled = true;
+                createSubmit.disabled = true;
+                createSubmit.querySelector('span').textContent = 'Login to Publish';
+            }
+        }
+        
+        function handleLogout() {
+            setAuthState(null);
+            showToast('Logged out successfully', 'success');
+        }
+
+        function switchAuthTab(tab) {
+            if (tab === 'login') {
+                tabLogin.classList.add('active');
+                tabRegister.classList.remove('active');
+                loginForm.classList.add('active');
+                registerForm.classList.remove('active');
+            } else {
+                tabRegister.classList.add('active');
+                tabLogin.classList.remove('active');
+                registerForm.classList.add('active');
+                loginForm.classList.remove('active');
+            }
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-submit');
+            
+            btn.innerHTML = '<div class="loader"></div>';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast('Logged in successfully!');
+                    setAuthState({ uid: data.uid, username: data.username });
+                    authModal.classList.remove('active');
+                    loginForm.reset();
+                } else {
+                    showToast(`Login failed: ${data.detail || 'Invalid credentials'}`, 'error');
+                }
+            } catch (error) {
+                showToast('Network error', 'error');
+            } finally {
+                btn.innerHTML = '<span>Login</span>';
+                btn.disabled = false;
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+            const btn = document.getElementById('register-submit');
+            
+            btn.innerHTML = '<div class="loader"></div>';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast('Account created & logged in!');
+                    setAuthState({ uid: data.uid, username: data.username });
+                    authModal.classList.remove('active');
+                    registerForm.reset();
+                } else {
+                    const errorMsg = data.username ? data.username[0] : 'Validation failed';
+                    showToast(`Registration failed: ${errorMsg}`, 'error');
+                }
+            } catch (error) {
+                showToast('Network error', 'error');
+            } finally {
+                btn.innerHTML = '<span>Create Account</span>';
+                btn.disabled = false;
+            }
+        }
 
         // Helper: Get Auth Headers
         function getAuthHeaders() {
-            const uid = uidInput.value.trim();
             const headers = {
                 'Content-Type': 'application/json'
             };
-            if (uid) {
-                headers['X-UID'] = uid;
+            if (currentUser && currentUser.uid) {
+                headers['X-UID'] = currentUser.uid;
             }
             return headers;
         }
@@ -718,9 +982,9 @@
         async function handleCreatePost(e) {
             e.preventDefault();
             
-            if (!uidInput.value) {
-                showToast('Authentication required. Please enter X-UID.', 'error');
-                uidInput.focus();
+            if (!currentUser) {
+                showToast('Authentication required. Please login.', 'error');
+                authModal.classList.add('active');
                 return;
             }
 
@@ -759,9 +1023,9 @@
 
         // API: Delete Post (DELETE)
         async function deletePost(id) {
-            if (!uidInput.value) {
-                showToast('Authentication required. Please enter X-UID.', 'error');
-                uidInput.focus();
+            if (!currentUser) {
+                showToast('Authentication required. Please login.', 'error');
+                authModal.classList.add('active');
                 return;
             }
 
@@ -810,10 +1074,10 @@
         async function handleEditPost(e) {
             e.preventDefault();
             
-            if (!uidInput.value) {
-                showToast('Authentication required. Please enter X-UID.', 'error');
+            if (!currentUser) {
+                showToast('Authentication required. Please login.', 'error');
                 closeModal();
-                uidInput.focus();
+                authModal.classList.add('active');
                 return;
             }
 

@@ -10,6 +10,7 @@
 |---|---|---|---|
 | `GET` | `/api/help/` | 取得即時動態 API 規格書 | 不需要 |
 | `POST` | `/api/auth/register/` | 註冊帳號，取得 uid | 不需要 |
+| `POST` | `/api/auth/login/` | 登入帳號，取得 uid | 不需要 |
 | `GET` | `/api/posts/` | 取得貼文列表（支援分頁、搜尋、排序） | 不需要 |
 | `GET` | `/api/posts/<id>/` | 取得單一貼文詳細資料 | 不需要 |
 | `POST` | `/api/posts/` | 發布新貼文（支援圖片） | `X-UID` Header |
@@ -149,7 +150,72 @@ else:
 
 ---
 
-## 2️⃣ GET `/api/posts/` — 取得貼文列表
+## 2️⃣ POST `/api/auth/login/` — 登入
+
+### 說明
+
+如果你已經註冊過，可以透過這隻 API 輸入帳號密碼來找回你的 `uid`。這也是前端介面用來實現「登入」狀態的端點。
+
+### Request
+
+不用帶 Header。請在 Body 傳入 JSON：
+
+```json
+{
+  "username": "alice",
+  "password": "Pass1234"
+}
+```
+
+### Response
+
+- **200 OK**：驗證成功
+  ```json
+  {
+    "uid": 3,
+    "username": "alice"
+  }
+  ```
+- **400 Bad Request**：沒帶帳號或密碼。
+- **401 Unauthorized**：帳號或密碼錯誤。
+
+### Code Example
+
+#### 範例：Mac / Linux (curl)
+```bash
+curl -X POST http://127.0.0.1:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"Pass1234"}'
+```
+
+#### 範例：Windows (PowerShell)
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/auth/login/ `
+  -Method POST `
+  -Headers @{"Content-Type"="application/json"} `
+  -Body '{"username":"alice","password":"Pass1234"}'
+```
+
+### 範例：Python
+
+```python
+import requests
+
+resp = requests.post(
+    "http://127.0.0.1:8000/api/auth/login/",
+    json={"username": "alice", "password": "Pass1234"},
+)
+
+if resp.status_code == 200:
+    data = resp.json()
+    print(f"✅ 登入成功！歡迎回來，你的 UID = {data['uid']}")
+else:
+    print("❌ 登入失敗：帳號或密碼錯誤！")
+```
+
+---
+
+## 3️⃣ GET `/api/posts/` — 取得貼文列表
 
 ### 說明
 
