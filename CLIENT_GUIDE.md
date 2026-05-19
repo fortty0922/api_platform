@@ -8,6 +8,7 @@
 
 | Method | URL | 說明 | 認證 |
 |---|---|---|---|
+| `GET` | `/api/help/` | 取得即時動態 API 規格書 | 不需要 |
 | `POST` | `/api/auth/register/` | 註冊帳號，取得 uid | 不需要 |
 | `GET` | `/api/posts/` | 取得貼文列表（支援分頁、搜尋、排序） | 不需要 |
 | `GET` | `/api/posts/<id>/` | 取得單一貼文詳細資料 | 不需要 |
@@ -35,6 +36,34 @@ X-UID: 3
 - 沒帶 Header → 公開端點（GET /api/posts/）可正常存取，私有端點回傳 `401`
 - uid 不存在 → `401 Unauthorized`
 - 刪除不屬於自己的貼文 → `403 Forbidden`
+
+---
+
+## 0️⃣ GET `/api/help/` — 動態 API 規格書
+
+### 說明
+
+取得目前系統上所有可用的 API 路由、HTTP Method 與所需的參數格式。這支 API 會自動反映系統的最新狀態，是開發串接時最好的參考文件。
+
+### Request
+
+不需要帶任何 Header 或參數。
+
+### Code Example
+
+#### curl
+```bash
+curl -s http://127.0.0.1:8000/api/help/ | python3 -m json.tool
+```
+
+#### Python (requests)
+```python
+import requests
+
+url = "http://127.0.0.1:8000/api/help/"
+response = requests.get(url)
+print(response.json())
+```
 
 ---
 
