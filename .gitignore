@@ -97,3 +97,8 @@ apscheduler.db
 *.tmp
 *.orig
 Thumbs.db
+
+# ── Teaching Materials ────────────────────────────────────────────────────────
+TEACHING_GUIDE.md
+backend_automation_spec-v2.md
+
