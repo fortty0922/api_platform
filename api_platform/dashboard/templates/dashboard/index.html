@@ -88,6 +88,22 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #server-time { font-family: 'JetBrains Mono', monospace; font-size: .8rem; color: var(--muted); }
+    
+    .btn-gui {
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      color: white;
+      text-decoration: none;
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 10px rgba(163, 113, 247, 0.2);
+    }
+    .btn-gui:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(163, 113, 247, 0.4);
+    }
 
     /* ── Layout ─────────────────────────────────────────────────── */
     main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
@@ -242,6 +258,7 @@
     API Platform — Server Monitor
   </div>
   <div class="header-right">
+    <a href="/gui/" class="btn-gui">✨ 進入 API 實驗室</a>
     <div id="refresh-indicator">
       <div class="spinner" id="spinner"></div>
       <span id="refresh-text">連線中...</span>

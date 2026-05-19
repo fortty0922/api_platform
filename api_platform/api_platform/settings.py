@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'posts',
     'post_operations',
     'dashboard',
+    'api_gui',
 ]
 
 ASGI_APPLICATION = 'api_platform.asgi.application'

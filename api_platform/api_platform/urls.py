@@ -37,9 +37,9 @@ urlpatterns = [
     path('api/operations/posts/', include('post_operations.urls')),
     # Server monitoring dashboard
     path('dashboard/', include('dashboard.urls')),
+    path('gui/', include('api_gui.urls')),
 ]
 
 # Serve uploaded media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
